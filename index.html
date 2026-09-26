@@ -198,6 +198,13 @@
       let objectUrl = "";
       let filename = "SongBox-Song.mp3";
       let busy = false;
+      const MAX_BYTES = 30 * 1024 * 1024;
+      const AUDIO_TYPES = new Set(["audio/mpeg", "audio/mp3"]);
+      const UUID_MP3 = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.mp3";
+      const ALLOWED_SOURCES = new Map([
+        ["tempfile.aiquickdraw.com", new RegExp(`^/r/${UUID_MP3}$`, "i")],
+        ["audiostream.api.box", new RegExp(`^/stream/${UUID_MP3}$`, "i")],
+      ]);
 
       function parameters() {
         return new URLSearchParams(location.hash.replace(/^#/, ""));
@@ -210,6 +217,29 @@
           .trim()
           .slice(0, 120);
         return `${clean || "SongBox-Song"}.mp3`;
+      }
+
+      function validateSource(rawUrl) {
+        let source;
+        try {
+          source = new URL(rawUrl);
+        } catch (_) {
+          throw new Error("Die MP3-Adresse ist ungültig.");
+        }
+        const pathPattern = ALLOWED_SOURCES.get(source.hostname.toLowerCase());
+        if (
+          source.protocol !== "https:" ||
+          source.username ||
+          source.password ||
+          (source.port && source.port !== "443") ||
+          source.search ||
+          source.hash ||
+          !pathPattern ||
+          !pathPattern.test(source.pathname)
+        ) {
+          throw new Error("Diese Downloadquelle ist nicht erlaubt.");
+        }
+        return source;
       }
 
       function triggerDownload() {
@@ -227,8 +257,7 @@
         if (busy) return;
         let source;
         try {
-          source = new URL(rawUrl);
-          if (source.protocol !== "https:") throw new Error("Nur HTTPS-Adressen sind erlaubt.");
+          source = validateSource(rawUrl);
         } catch (error) {
           showError(error.message || "Die MP3-Adresse ist ungültig.");
           return;
@@ -248,8 +277,18 @@
           if (!response.ok) throw new Error(`Der Musikserver antwortet mit Fehler ${response.status}.`);
 
           const total = Number(response.headers.get("content-length")) || 0;
+          const contentType = (response.headers.get("content-type") || "")
+            .split(";", 1)[0]
+            .trim()
+            .toLowerCase();
+          if (!AUDIO_TYPES.has(contentType)) {
+            throw new Error("Die Quelle hat keine gültige MP3-Datei geliefert.");
+          }
+          if (total > MAX_BYTES) {
+            throw new Error("Die MP3-Datei ist größer als die erlaubten 30 MB.");
+          }
           let blob;
-          if (response.body && total) {
+          if (response.body) {
             const reader = response.body.getReader();
             const chunks = [];
             let received = 0;
@@ -258,7 +297,15 @@
               if (part.done) break;
               chunks.push(part.value);
               received += part.value.length;
-              bar.style.width = `${Math.max(8, Math.min(96, received / total * 100))}%`;
+              if (received > MAX_BYTES) {
+                await reader.cancel();
+                throw new Error("Die MP3-Datei ist größer als die erlaubten 30 MB.");
+              }
+              if (total) {
+                bar.style.width = `${Math.max(8, Math.min(96, received / total * 100))}%`;
+              } else {
+                bar.style.width = `${Math.min(90, 8 + received / MAX_BYTES * 82)}%`;
+              }
             }
             blob = new Blob(chunks, { type: "audio/mpeg" });
           } else {
@@ -266,6 +313,7 @@
             blob = await response.blob();
           }
           if (!blob.size) throw new Error("Der Musikserver hat eine leere Datei geliefert.");
+          if (blob.size > MAX_BYTES) throw new Error("Die MP3-Datei ist größer als die erlaubten 30 MB.");
 
           if (objectUrl) URL.revokeObjectURL(objectUrl);
           objectUrl = URL.createObjectURL(blob);

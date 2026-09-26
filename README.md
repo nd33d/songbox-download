@@ -22,6 +22,10 @@ http://localhost:8080/#url=https%3A%2F%2Fexample.com%2Fsong.mp3&title=Mein+Song
 Wichtig: Die MP3-Quelle muss Browserzugriffe über CORS erlauben. Die aktuell von Suno API
 gelieferten Domains `tempfile.aiquickdraw.com` und `audiostream.api.box` erlauben dies.
 
+Aus Sicherheitsgründen akzeptiert die Seite ausschließlich UUID-basierte MP3-Pfade dieser beiden
+Domains. Die Antwort muss den MIME-Typ `audio/mpeg` oder `audio/mp3` tragen und darf höchstens
+30 MiB groß sein. Das Größenlimit wird vor und während des Downloads geprüft.
+
 ## Veröffentlichen
 
 Das Repository kann ohne Build-Schritt auf GitHub Pages oder Cloudflare Pages veröffentlicht
