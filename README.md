@@ -12,8 +12,7 @@ Im Repository starten:
 python3 -m http.server 8080
 ```
 
-Danach `http://localhost:8080` öffnen und eine MP3-URL in das Testformular einfügen. Alternativ
-kann direkt ein fertiger Link geöffnet werden:
+Danach einen vollständigen Link mit den gleichen Parametern öffnen, die später im QR-Code stehen:
 
 ```text
 http://localhost:8080/#url=https%3A%2F%2Fexample.com%2Fsong.mp3&title=Mein+Song
@@ -36,3 +35,5 @@ https://DEINE-SEITE.example/#url=URL_ENCODED&title=TITEL_ENCODED
 ```
 
 Alles hinter `#` wird nur im Browser verarbeitet und nicht als Anfrage an den Seitenhost gesendet.
+Ein Aufruf ohne vollständige Parameter zeigt bewusst nur einen neutralen Fehlerhinweis; die Seite
+besitzt keine Eingabefelder für beliebige URLs.

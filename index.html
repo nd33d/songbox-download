@@ -132,30 +132,6 @@
       line-height: 1.45;
     }
 
-    .setup {
-      display: none;
-      margin-top: 18px;
-      padding-top: 18px;
-      border-top: 1px solid var(--line);
-      text-align: left;
-    }
-
-    .setup.visible { display: block; }
-    label { display: block; margin: 14px 0 7px; font-size: 13px; font-weight: 650; }
-    input {
-      width: 100%;
-      padding: 13px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      outline: none;
-      color: #fff;
-      background: #111115;
-      font: inherit;
-      font-size: 14px;
-    }
-    input:focus { border-color: var(--accent); }
-    .setup button { margin-top: 16px; }
-
     .error #status { color: #fca5a5; }
     .ready .progress > span { width: 100% !important; }
   </style>
@@ -171,15 +147,6 @@
       <div class="progress" aria-hidden="true"><span id="bar"></span></div>
       <button id="download" type="button" disabled>⬇ Song herunterladen</button>
       <p class="hint" id="hint">Falls dein Browser nicht automatisch startet, tippe auf den Button.</p>
-
-      <form class="setup" id="setup">
-        <p class="hint">Zum lokalen Testen eine öffentliche MP3-Adresse einfügen:</p>
-        <label for="url-input">MP3-Adresse</label>
-        <input id="url-input" type="url" inputmode="url" placeholder="https://…/song.mp3" required>
-        <label for="title-input">Songtitel</label>
-        <input id="title-input" type="text" value="Mein Song" maxlength="100">
-        <button type="submit">Test starten</button>
-      </form>
     </section>
   </main>
 
@@ -192,9 +159,6 @@
       const status = document.querySelector("#status");
       const bar = document.querySelector("#bar");
       const button = document.querySelector("#download");
-      const setup = document.querySelector("#setup");
-      const urlInput = document.querySelector("#url-input");
-      const titleInput = document.querySelector("#title-input");
       let objectUrl = "";
       let filename = "SongBox-Song.mp3";
       let busy = false;
@@ -265,7 +229,6 @@
 
         busy = true;
         app.className = "loading";
-        setup.classList.remove("visible");
         title.textContent = songTitle || "SongBox Hit";
         filename = safeFilename(songTitle);
         status.textContent = "Dein Song wird geladen …";
@@ -320,6 +283,8 @@
           app.className = "ready";
           status.textContent = "Fertig! Der Download sollte jetzt starten.";
           button.disabled = false;
+          button.hidden = false;
+          document.querySelector("#hint").hidden = false;
           button.textContent = "⬇ Song herunterladen";
           triggerDownload();
         } catch (error) {
@@ -334,16 +299,11 @@
         status.textContent = message;
         bar.style.width = "0";
         button.disabled = !objectUrl;
-        setup.classList.add("visible");
+        button.hidden = !objectUrl;
+        document.querySelector("#hint").hidden = !objectUrl;
       }
 
       button.addEventListener("click", triggerDownload);
-      setup.addEventListener("submit", event => {
-        event.preventDefault();
-        const next = new URLSearchParams({ url: urlInput.value, title: titleInput.value });
-        location.hash = next.toString();
-        prepare(urlInput.value, titleInput.value);
-      });
 
       const params = parameters();
       const source = params.get("url") || "";
@@ -351,8 +311,8 @@
       if (source) {
         prepare(source, songTitle);
       } else {
-        title.textContent = "Download testen";
-        showError("Im Link fehlt noch eine MP3-Adresse.");
+        title.textContent = "Kein Song gefunden";
+        showError("Dieser Downloadlink ist ungültig oder unvollständig.");
       }
 
       addEventListener("beforeunload", () => {
